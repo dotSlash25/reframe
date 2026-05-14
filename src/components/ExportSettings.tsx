@@ -9,7 +9,12 @@ interface Props {
 }
 
 export default function ExportSettings({ recipe, onChange }: Props) {
-  const label = recipe.quality <= 20 ? "High" : recipe.quality <= 24 ? "Balanced" : "Small file";
+  const label =
+    recipe.quality <= 20
+      ? "High"
+      : recipe.quality <= 24
+        ? "Balanced"
+        : "Small file";
 
   return (
     <div>
@@ -19,11 +24,15 @@ export default function ExportSettings({ recipe, onChange }: Props) {
         </label>
         <span className="text-sm font-heading font-bold text-film-600">
           {label}
-          <span className="font-normal text-xs text-[var(--muted)] ml-1">CRF {recipe.quality}</span>
+          <span className="font-normal text-xs text-[var(--muted)] ml-1">
+            CRF {recipe.quality}
+          </span>
         </span>
       </div>
       <input
         type="range"
+        aria-label="Video quality"
+        aria-describedby="quality-description"
         min={18}
         max={30}
         step={1}
@@ -35,6 +44,12 @@ export default function ExportSettings({ recipe, onChange }: Props) {
         <span className="text-[10px] text-[var(--muted)]">Best quality</span>
         <span className="text-[10px] text-[var(--muted)]">Smallest file</span>
       </div>
+      <p
+        id="quality-description"
+        className="text-[10px] font-semibold text-[var(--muted)]"
+      >
+        Higher value = smaller file size, lower quality
+      </p>
     </div>
   );
 }
