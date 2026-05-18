@@ -125,46 +125,46 @@ function buildVideoFilter(recipe: EditRecipe, targetW: number, targetH: number):
     filters.push(
       `scale=${targetW}:${targetH}:force_original_aspect_ratio=increase`,
       `crop=${targetW}:${targetH}`
-    );
+    )
   }
 
   if (recipe.speed !== 1) {
-    const pts = (1 / recipe.speed).toFixed(4);
-    filters.push(`setpts=${pts}*PTS`);
+    const pts = (1 / recipe.speed).toFixed(4)
+    filters.push(`setpts=${pts}*PTS`)
   }
   filters.push(
     `eq=brightness=${recipe.brightness}:contrast=${recipe.contrast}:saturation=${recipe.saturation}`
-  );
-  return filters.join(",");
+  )
+  return filters.join(',')
 }
 
 export function buildAudioFilter(speed: number): string {
-  if (speed === 1) return "";
+  if (speed === 1) return ''
 
-  const filters: string[] = [];
-  let remaining = speed;
+  const filters: string[] = []
+  let remaining = speed
 
   while (remaining < 0.5) {
-    filters.push("atempo=0.5");
-    remaining /= 0.5;
+    filters.push('atempo=0.5')
+    remaining /= 0.5
   }
 
   while (remaining > 2.0) {
-    filters.push("atempo=2.0");
-    remaining /= 2.0;
+    filters.push('atempo=2.0')
+    remaining /= 2.0
   }
 
   if (Math.abs(remaining - 1.0) > 0.001) {
-    filters.push(`atempo=${Number(remaining.toFixed(4))}`);
+    filters.push(`atempo=${Number(remaining.toFixed(4))}`)
   }
 
-  return filters.join(",");
+  return filters.join(',')
 }
 
 function buildAudioTrimFilter(recipe: EditRecipe): string {
-  if (recipe.trimStart === 0 && recipe.trimEnd === null) return "";
-  const end = recipe.trimEnd !== null ? recipe.trimEnd : 999999;
-  return `atrim=start=${recipe.trimStart}:end=${end},asetpts=PTS-STARTPTS`;
+  if (recipe.trimStart === 0 && recipe.trimEnd === null) return ''
+  const end = recipe.trimEnd !== null ? recipe.trimEnd : 999999
+  return `atrim=start=${recipe.trimStart}:end=${end},asetpts=PTS-STARTPTS`
 }
 
 function buildArguments(
@@ -308,144 +308,173 @@ export async function exportVideo(
   musicOptions?: BackgroundMusicOptions,
   overlayOptions?: ImageOverlayOptions
 ): Promise<ExportResult> {
-  const sessionId = buildSessionId();
-  let targetW: number, targetH: number;
-  if (recipe.preset === "custom") {
-    targetW = recipe.customWidth;
-    targetH = recipe.customHeight;
+  const sessionId = buildSessionId()
+  let targetW: number, targetH: number
+  if (recipe.preset === 'custom') {
+    targetW = recipe.customWidth
+    targetH = recipe.customHeight
   } else {
-    const preset = getPresetById(recipe.preset);
-    targetW = preset?.width ?? 1920;
-    targetH = preset?.height ?? 1080;
+    const preset = getPresetById(recipe.preset)
+    targetW = preset?.width ?? 1920
+    targetH = preset?.height ?? 1080
   }
 
-  targetW = Math.round(targetW / 2) * 2;
-  targetH = Math.round(targetH / 2) * 2;
+  targetW = Math.round(targetW / 2) * 2
+  targetH = Math.round(targetH / 2) * 2
 
-  const ext = file.name.split(".").pop() ?? "mp4";
-  const inputName = `input_${sessionId}.${ext}`;
+  const ext = file.name.split('.').pop() ?? 'mp4'
+  const inputName = `input_${sessionId}.${ext}`
 
   const getOutputConfig = (format: string) => {
     switch (format) {
-      case "webm":
-        return { filename: `output_${sessionId}.webm`, mimeType: "video/webm" };
-      case "mkv":
-        return { filename: `output_${sessionId}.mkv`, mimeType: "video/x-matroska" };
+      case 'webm':
+        return { filename: `output_${sessionId}.webm`, mimeType: 'video/webm' }
+      case 'mkv':
+        return { filename: `output_${sessionId}.mkv`, mimeType: 'video/x-matroska' }
       default:
-        return { filename: `output_${sessionId}.mp4`, mimeType: "video/mp4" };
+        return { filename: `output_${sessionId}.mp4`, mimeType: 'video/mp4' }
     }
-  };
+  }
 
-  const { filename: outputName, mimeType } = getOutputConfig(recipe.format);
-  const fallbackOutputName = `fallback_${sessionId}.webm`;
-  const cleanupFiles = new Set<string>([inputName, outputName, fallbackOutputName]);
+  const { filename: outputName, mimeType } = getOutputConfig(recipe.format)
+  const fallbackOutputName = `fallback_${sessionId}.webm`
+  const cleanupFiles = new Set<string>([inputName, outputName, fallbackOutputName])
 
   const handleProgress = ({ progress }: { progress: number }) => {
-    onProgress(Math.min(99, Math.round(progress * 100)));
-  };
+    onProgress(Math.min(99, Math.round(progress * 100)))
+  }
 
   try {
-    await ffmpeg.writeFile(inputName, await fetchFile(file), { signal });
+    await ffmpeg.writeFile(inputName, await fetchFile(file), { signal })
 
-    const hasMusicTrack = !!(musicOptions?.file && recipe.keepAudio);
-    const musicInputName = `music_input_${sessionId}.mp3`;
+    const hasMusicTrack = !!(musicOptions?.file && recipe.keepAudio)
+    const musicInputName = `music_input_${sessionId}.mp3`
     if (hasMusicTrack) {
-      await ffmpeg.writeFile(musicInputName, await fetchFile(musicOptions!.file!), { signal });
-      cleanupFiles.add(musicInputName);
+      await ffmpeg.writeFile(musicInputName, await fetchFile(musicOptions!.file!), { signal })
+      cleanupFiles.add(musicInputName)
     }
 
-    const hasOverlay = !!(overlayOptions?.file);
-    const overlayExt = overlayOptions?.file?.name.split(".").pop() ?? "png";
-    const overlayInputName = `overlay_${sessionId}.${overlayExt}`;
+    const hasOverlay = !!overlayOptions?.file
+    const overlayExt = overlayOptions?.file?.name.split('.').pop() ?? 'png'
+    const overlayInputName = `overlay_${sessionId}.${overlayExt}`
     if (hasOverlay) {
-      await ffmpeg.writeFile(overlayInputName, await fetchFile(overlayOptions!.file!), { signal });
-      cleanupFiles.add(overlayInputName);
+      await ffmpeg.writeFile(overlayInputName, await fetchFile(overlayOptions!.file!), { signal })
+      cleanupFiles.add(overlayInputName)
+    }
+
+    ffmpeg.on('progress', handleProgress)
+
+    let missingAudioDetected = false
+    const logListener = ({ message }: { message: string }) => {
+      const msg = message.toLowerCase()
+      if (
+        msg.includes('matches no streams') ||
+        msg.includes("specifier '0:a'") ||
+        msg.includes('input pad 0 on filter src')
+      ) {
+        missingAudioDetected = true
+      }
     }
     ffmpeg.on('log', logListener)
 
-    ffmpeg.on("progress", handleProgress);
-
-    let missingAudioDetected = false;
-    const logListener = ({ message }: { message: string }) => {
-      const msg = message.toLowerCase();
-      if (
-        msg.includes("matches no streams") ||
-        msg.includes("specifier '0:a'") ||
-        msg.includes("input pad 0 on filter src")
-      ) {
-        missingAudioDetected = true;
-      }
-    };
-    ffmpeg.on("log", logListener);
-
     // Attempt 1: Process with standard audio streams
     let args = buildArguments(
-      recipe, recipe.format, outputName, inputName, targetW, targetH,
-      hasMusicTrack, musicInputName, musicOptions,
-      hasOverlay, overlayInputName, overlayOptions, true
-    );
+      recipe,
+      recipe.format,
+      outputName,
+      inputName,
+      targetW,
+      targetH,
+      hasMusicTrack,
+      musicInputName,
+      musicOptions,
+      hasOverlay,
+      overlayInputName,
+      overlayOptions,
+      true
+    )
 
-    let exitCode = await ffmpeg.exec(args, undefined, { signal });
+    let exitCode = await ffmpeg.exec(args, undefined, { signal })
 
     // Attempt 2: Auto-recover if the file has no original audio track
     if (exitCode !== 0 && missingAudioDetected) {
-      missingAudioDetected = false;
+      missingAudioDetected = false
       args = buildArguments(
-        recipe, recipe.format, outputName, inputName, targetW, targetH,
-        hasMusicTrack, musicInputName, musicOptions,
-        hasOverlay, overlayInputName, overlayOptions, false
-      );
-      exitCode = await ffmpeg.exec(args, undefined, { signal });
+        recipe,
+        recipe.format,
+        outputName,
+        inputName,
+        targetW,
+        targetH,
+        hasMusicTrack,
+        musicInputName,
+        musicOptions,
+        hasOverlay,
+        overlayInputName,
+        overlayOptions,
+        false
+      )
+      exitCode = await ffmpeg.exec(args, undefined, { signal })
     }
 
     // Fallback Attempt 3: Switch codecs to WebM if container errors happen
     if (exitCode !== 0) {
       args = buildArguments(
-        recipe, "webm", fallbackOutputName, inputName, targetW, targetH,
-        hasMusicTrack, musicInputName, musicOptions,
-        hasOverlay, overlayInputName, overlayOptions, !missingAudioDetected
-      );
+        recipe,
+        'webm',
+        fallbackOutputName,
+        inputName,
+        targetW,
+        targetH,
+        hasMusicTrack,
+        musicInputName,
+        musicOptions,
+        hasOverlay,
+        overlayInputName,
+        overlayOptions,
+        !missingAudioDetected
+      )
 
-      const fallbackCode = await ffmpeg.exec(args, undefined, { signal });
-      if (fallbackCode !== 0) throw new Error("Export failed");
+      const fallbackCode = await ffmpeg.exec(args, undefined, { signal })
+      if (fallbackCode !== 0) throw new Error('Export failed')
 
-      const data = await ffmpeg.readFile(fallbackOutputName, undefined, { signal });
-      const blob = new Blob([new Uint8Array(data as Uint8Array)], { type: "video/webm" });
+      const data = await ffmpeg.readFile(fallbackOutputName, undefined, { signal })
+      const blob = new Blob([new Uint8Array(data as Uint8Array)], { type: 'video/webm' })
 
-      ffmpeg.off("log", logListener);
-      onProgress(100);
+      ffmpeg.off('log', logListener)
+      onProgress(100)
       return {
         blobUrl: URL.createObjectURL(blob),
         size: blob.size,
         width: targetW,
         height: targetH,
-        format: "webm",
-      };
+        format: 'webm',
+      }
     }
 
-    const data = await ffmpeg.readFile(outputName, undefined, { signal });
-    const blob = new Blob([new Uint8Array(data as Uint8Array)], { type: mimeType });
+    const data = await ffmpeg.readFile(outputName, undefined, { signal })
+    const blob = new Blob([new Uint8Array(data as Uint8Array)], { type: mimeType })
 
-    ffmpeg.off("log", logListener);
-    onProgress(100);
+    ffmpeg.off('log', logListener)
+    onProgress(100)
     return {
       blobUrl: URL.createObjectURL(blob),
       size: blob.size,
       width: targetW,
       height: targetH,
-      format: recipe.format as "mp4" | "webm" | "mkv",
-    };
+      format: recipe.format as 'mp4' | 'webm' | 'mkv',
+    }
   } finally {
-    ffmpeg.off("progress", handleProgress);
+    ffmpeg.off('progress', handleProgress)
     for (const path of cleanupFiles) {
       try {
-        await ffmpeg.deleteFile(path);
+        await ffmpeg.deleteFile(path)
       } catch {}
     }
   }
 }
 
 export function formatBytes(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }

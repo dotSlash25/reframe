@@ -18,26 +18,6 @@ export interface EditRecipe {
   soundOnCompletion: boolean;
 }
 
-export type OverlayPosition =
-  | "top-left"
-  | "top-right"
-  | "bottom-left"
-  | "bottom-right";
-
-export interface ImageOverlayOptions {
-  file: File | null;
-  position: OverlayPosition;
-  size: number;
-  opacity: number;
-}
-
-export interface BackgroundMusicOptions {
-  file: File | null;
-  musicVolume: number;
-  originalAudioVolume: number;
-  loopMusic: boolean;
-}
-
 export type OverlayPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 
 export interface ImageOverlayOptions {
@@ -76,10 +56,10 @@ export const SPEED_STEPS = [
 ] as const;
 
 export const DEFAULT_RECIPE: EditRecipe = {
-  preset: "vertical-9-16",
+  preset: 'vertical-9-16',
   customWidth: 1920,
   customHeight: 1080,
-  framing: "fit",
+  framing: 'fit',
   trimStart: 0,
   trimEnd: null,
   rotate: 0,
@@ -93,10 +73,9 @@ export const DEFAULT_RECIPE: EditRecipe = {
   contrast: 0,
   saturation: 0,
   soundOnCompletion: false,
-};
+}
 
 export const MAX_FILE_SIZE =
   2 * 1024 * 1024 * 1024;
 
-export const WARNING_FILE_SIZE =
-  500 * 1024 * 1024; // 500MB
+export const WARNING_FILE_SIZE = 500 * 1024 * 1024 // 500MB
