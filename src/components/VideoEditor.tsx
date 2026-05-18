@@ -19,7 +19,7 @@ import ImageOverlay from "./ImageOverlay";
 import { cn } from '@/lib/utils'
 import {
   Layers, Crop, Scissors, RotateCw, Volume2,
-  SlidersHorizontal, Zap, AlertTriangle, Github
+  SlidersHorizontal, Zap, AlertTriangle, Github, TimerReset
 } from "lucide-react";
 import OnboardingTour from "./OnboardingTour";
 

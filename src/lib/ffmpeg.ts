@@ -5,24 +5,6 @@ import { getPresetById } from './presets'
 import { simd } from 'wasm-feature-detect'
 
 const CORE_BASE_URL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd'
-const SRI_HASHES: Record<string, string> = {
-  'ffmpeg-core.js': 'sha384-sKfkiFtvUk+vexk+0EUhEh366190/4WpgUAsUvaxEfyg7+E1Zt5Y5hrsU808g8Q9',
-  'ffmpeg-core.wasm': 'sha384-U1VDhkPYrM3wTCT4/vjSpSsKqG/UjljYrYCI4hBSJ02svbCkxuCi6U6u/peg5vpW',
-}
-
-async function fetchWithIntegrity(url: string, mimeType: string): Promise<string> {
-  const key = url.split('/').pop()!
-
-  const integrity = SRI_HASHES[key]
-
-  if (!integrity) {
-    throw new Error(`[SRI] No hash found for: ${key}`)
-  }
-
-  const res = await fetch(url, { integrity, credentials: 'omit' })
-  const blob = new Blob([await res.arrayBuffer()], { type: mimeType })
-  return URL.createObjectURL(blob)
-}
 
 // Added from main branch for subresource security verification
 const SRI_HASHES: Record<string, string> = {
@@ -75,7 +57,7 @@ export async function loadFFmpeg(
   try {
     ffmpeg.on('progress', handleProgress)
 
-    // Load FFmpeg using the dynamic URLs + the new signal parameter
+    // Secure engine load using verified runtime checksum hashes from main
     await ffmpeg.load(
       {
         coreURL: await fetchWithIntegrity(`${CORE_BASE_URL}/ffmpeg-core.js`, 'text/javascript'),
