@@ -166,11 +166,7 @@ export default function VideoEditor() {
                   <Section icon={<Volume2 size={12} />} title="Audio & Speed" delay={150}>
                     <AudioSpeedControl recipe={recipe} onChange={updateRecipe} />
                   </Section>
-                  <Section
-                    icon={<SlidersHorizontal size={12} />}
-                    title="Adjustments"
-                    delay={175}
-                  >
+                  <Section icon={<SlidersHorizontal size={12} />} title="Adjustments" delay={175}>
                     <div className="space-y-5">
                       {/* Brightness */}
                       <div className="space-y-2">
@@ -305,7 +301,11 @@ export default function VideoEditor() {
 
             {status === 'done' && result && (
               <div role="status" className="animate-fade-in" ref={downloadRef}>
-                <DownloadResult result={result} onReset={reset} soundOnCompletion={recipe.soundOnCompletion} />
+                <DownloadResult
+                  result={result}
+                  onReset={reset}
+                  soundOnCompletion={recipe.soundOnCompletion}
+                />
               </div>
             )}
           </div>
