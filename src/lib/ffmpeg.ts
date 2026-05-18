@@ -1,119 +1,113 @@
-import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { fetchFile } from "@ffmpeg/util";
-import { EditRecipe, ExportResult, BackgroundMusicOptions, ImageOverlayOptions } from "./types";
-import { getPresetById } from "./presets";
-import { simd } from "wasm-feature-detect";
+import { FFmpeg } from '@ffmpeg/ffmpeg'
+import { fetchFile, toBlobURL } from '@ffmpeg/util'
+import { EditRecipe, ExportResult } from './types'
+import { getPresetById } from './presets'
+import { simd } from 'wasm-feature-detect'
 
-const CORE_BASE_URL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+const CORE_BASE_URL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd'
 
-// Added from main branch for subresource security verification
-const SRI_HASHES: Record<string, string> = {
-  "ffmpeg-core.js":   "sha384-sKfkiFtvUk+vexk+0EUhEh366190/4WpgUAsUvaxEfyg7+E1Zt5Y5hrsU808g8Q9",
-  "ffmpeg-core.wasm": "sha384-U1VDhkPYrM3wTCT4/vjSpSsKqG/UjljYrYCI4hBSJ02svbCkxuCi6U6u/peg5vpW",
-};
-
-// Added from main branch to perform secure binary verification
-async function fetchWithIntegrity(url: string, mimeType: string): Promise<string> {
-  const key = url.split("/").pop()!;
-  const integrity = SRI_HASHES[key];
-
-  if (!integrity) {
-    throw new Error(`[SRI] No hash found for: ${key}`);
-  }
-
-  const res = await fetch(url, { integrity, credentials: "omit" });
-  const blob = new Blob([await res.arrayBuffer()], { type: mimeType });
-  return URL.createObjectURL(blob);
-}
-
-let ffmpegInstance: FFmpeg | null = null;
+let ffmpegInstance: FFmpeg | null = null
 
 /**
  * Error thrown when the FFmpeg WebAssembly core fails to load.
+ * This typically happens when the user is offline, the CDN is unreachable (or if the url is wrong),
+ * or there are network interruptions during the initialization phase.
  */
 export class FFmpegLoadError extends Error {
   constructor(message: string) {
-    super(message);
-    this.name = "FFmpegLoadError";
+    super(message)
+    this.name = 'FFmpegLoadError'
   }
 }
-
 export async function loadFFmpeg(
-  signal?: AbortSignal, 
+  signal?: AbortSignal,
   onProgress?: (percent: number) => void
 ): Promise<FFmpeg> {
   if (ffmpegInstance?.loaded) {
-    onProgress?.(100);
-    return ffmpegInstance;
+    onProgress?.(100)
+    return ffmpegInstance
   }
 
-  const ffmpeg = ffmpegInstance ?? new FFmpeg();
-  ffmpegInstance = ffmpeg;
+  const ffmpeg = ffmpegInstance ?? new FFmpeg()
+  ffmpegInstance = ffmpeg
 
   const handleProgress = ({ progress }: { progress: number }) => {
-    onProgress?.(Math.round(progress * 100));
-  };
+    onProgress?.(Math.round(progress * 100))
+  }
 
   try {
-    ffmpeg.on("progress", handleProgress);
+    ffmpeg.on('progress', handleProgress)
+    // Check if the user's browser supports WebAssembly SIMD
+    const isSimdSupported = await simd()
 
-    // Secure engine load using verified runtime checksum hashes from main
-    await ffmpeg.load({
-      coreURL: await fetchWithIntegrity(`${CORE_BASE_URL}/ffmpeg-core.js`, "text/javascript"),
-      wasmURL: await fetchWithIntegrity(`${CORE_BASE_URL}/ffmpeg-core.wasm`, "application/wasm"),
-    }, { signal });
+    // Dynamically set the core filename
+    const coreName = isSimdSupported ? 'ffmpeg-core-simd' : 'ffmpeg-core'
 
-    onProgress?.(100);
-    return ffmpeg;
+    // Load FFmpeg using the dynamic URLs + the new signal parameter
+    await ffmpeg.load(
+      {
+        coreURL: await toBlobURL(`${CORE_BASE_URL}/${coreName}.js`, 'text/javascript'),
+        wasmURL: await toBlobURL(`${CORE_BASE_URL}/${coreName}.wasm`, 'application/wasm'),
+      },
+      { signal }
+    )
+    onProgress?.(100)
+    return ffmpeg
   } catch (err) {
     if (ffmpegInstance === ffmpeg) {
-      ffmpegInstance = null;
+      ffmpegInstance = null
     }
-    throw new FFmpegLoadError("Failed to load the FFmpeg engine. Check your internet connection.");
+    throw new FFmpegLoadError('Failed to load the FFmpeg engine. Check your internet connection.')
   } finally {
-    ffmpeg.off("progress", handleProgress);
+    ffmpeg.off('progress', handleProgress)
   }
 }
 
+/** Terminates the active FFmpeg instance and releases its memory. */
 export function terminateFFmpeg() {
-  ffmpegInstance?.terminate();
-  ffmpegInstance = null;
+  ffmpegInstance?.terminate()
+  ffmpegInstance = null
 }
 
+/** Generates a unique session ID used to isolate FFmpeg file names across concurrent exports. */
 function buildSessionId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID()
   }
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
+/** Builds the FFmpeg -vf filter chain string from the current recipe settings. */
 function buildVideoFilter(recipe: EditRecipe, targetW: number, targetH: number): string {
-  const filters: string[] = [];
+  const filters: string[] = []
 
   if (recipe.trimStart > 0 || recipe.trimEnd !== null) {
-    const end = recipe.trimEnd !== null ? recipe.trimEnd : 999999;
-    filters.push(`trim=start=${recipe.trimStart}:end=${end}`);
-    filters.push("setpts=PTS-STARTPTS");
+    const end = recipe.trimEnd !== null ? recipe.trimEnd : 999999
+    filters.push(`trim=start=${recipe.trimStart}:end=${end}`)
+    filters.push('setpts=PTS-STARTPTS')
   }
 
   if (recipe.rotate === 90) {
-    filters.push("transpose=1");
+    filters.push('transpose=1')
   } else if (recipe.rotate === 180) {
-    filters.push("transpose=1,transpose=1");
+    filters.push('transpose=1,transpose=1')
   } else if (recipe.rotate === 270) {
-    filters.push("transpose=2");
+    filters.push('transpose=2')
   }
 
-  // Integrated from main branch layout enhancements
-  if ((recipe as any).stabilization) {
-    filters.push("deshake=x=-1:y=-1:w=-1:h=-1:rx=16:ry=16");
+  if (recipe.frameRate !== 0) {
+    filters.push(`fps=${recipe.frameRate}`)
   }
 
-  if (recipe.framing === "fit") {
+  if (recipe.stabilization) {
+    filters.push('deshake=x=-1:y=-1:w=-1:h=-1:rx=16:ry=16')
+  }
+
+  if (recipe.framing === 'fit') {
     filters.push(
       `scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease`,
       `pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2:color=black`
-    );
+    )
   } else {
     filters.push(
       `scale=${targetW}:${targetH}:force_original_aspect_ratio=increase`,

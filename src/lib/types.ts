@@ -6,6 +6,7 @@ export interface EditRecipe {
   trimStart: number;
   trimEnd: number | null;
   rotate: 0 | 90 | 180 | 270;
+  frameRate: 0 | 24 | 30 | 60;
   keepAudio: boolean;
   speed: number;
   quality: number;
@@ -38,19 +39,14 @@ export interface BackgroundMusicOptions {
 }
 
 export interface ExportResult {
-  blobUrl: string;
-  size: number;
-  width: number;
-  height: number;
-  format: "mp4" | "webm" | "mkv";
+  blobUrl: string
+  size: number
+  width: number
+  height: number
+  format: 'mp4' | 'webm' | 'mkv'
 }
 
-export type ExportStatus =
-  | "idle"
-  | "loading-engine"
-  | "exporting"
-  | "done"
-  | "error";
+export type ExportStatus = 'idle' | 'loading-engine' | 'exporting' | 'done' | 'error'
 
 export const SPEED_STEPS = [
   0.25,
@@ -71,6 +67,7 @@ export const DEFAULT_RECIPE: EditRecipe = {
   trimStart: 0,
   trimEnd: null,
   rotate: 0,
+  frameRate: 0,
   keepAudio: true,
   speed: 1,
   quality: 23,
